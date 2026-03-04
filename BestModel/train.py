@@ -172,9 +172,23 @@ model.load_state_dict(torch.load(os.path.join(CHECKPOINT_DIR, "best_model.pt")))
 model.eval()
 
 # ======================
+# RECOMPUTE DEV PROBS USING BEST MODEL
+# ======================
+dev_probs = []
+dev_true = []
+
+with torch.no_grad():
+    for batch in dev_loader:
+        batch = {k: v.to(DEVICE) for k,v in batch.items()}
+        outputs = model(**batch)
+        p = torch.softmax(outputs.logits, dim=1)[:,1]
+        dev_probs.extend(p.cpu().numpy())
+        dev_true.extend(batch["labels"].cpu().numpy())
+
+# ======================
 # WRITE DEV.TXT
 # ======================
-final_preds = (np.array(probs) >= best_threshold).astype(int)
+final_preds = (np.array(dev_probs) >= best_threshold).astype(int)
 
 with open("BestModel/dev.txt", "w") as f:
     for p in final_preds:
